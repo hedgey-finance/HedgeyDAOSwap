@@ -58,19 +58,19 @@ contract HedgeyDAOSwap is ReentrancyGuard {
     address nftLocker
   ) external nonReentrant {
     TransferHelper.transferTokens(tokenA, msg.sender, address(this), amountA);
-    emit NewSwap(swapId, tokenA, tokenB, amountA, amountB, unlockDate, msg.sender, executor, nftLocker);
     swaps[swapId++] = Swap(tokenA, tokenB, amountA, amountB, unlockDate, msg.sender, executor, nftLocker);
+    emit NewSwap(swapId, tokenA, tokenB, amountA, amountB, unlockDate, msg.sender, executor, nftLocker);
   }
 
   /**
    * Executes an existing swap
-   * @param _swapId The ID of the swap to execute
+   * @param id The ID of the swap to execute
    * @notice Can only be executed by the executor address
    */
-  function executeSwap(uint256 _swapId) external nonReentrant {
-    Swap memory swap = swaps[_swapId];
+  function executeSwap(uint256 id) external nonReentrant {
+    Swap memory swap = swaps[id];
     require(msg.sender == swap.executor, "Swap executor not authorized");
-    delete swaps[_swapId];
+    delete swaps[id];
     if (swap.unlockDate > block.timestamp) {
       TransferHelper.transferTokens(swap.tokenB, swap.executor, address(this), swap.amountB);
       NFTHelper.lockTokens(swap.nftLocker, swap.initiator, swap.tokenB, swap.amountB, swap.unlockDate);
@@ -79,28 +79,28 @@ contract HedgeyDAOSwap is ReentrancyGuard {
       TransferHelper.transferTokens(swap.tokenB, swap.executor, swap.initiator, swap.amountB);
       TransferHelper.withdrawTokens(swap.tokenA, swap.executor, swap.amountA);
     }
-    emit SwapExecuted(_swapId);
+    emit SwapExecuted(id);
   }
 
   /**
    * Cancels a swap that was previously setup
-   * @param _swapId The ID of the swap to cancel
+   * @param id The ID of the swap to cancel
    * @notice Can only be cancelled by the initiator address
    */
-  function cancelSwap(uint256 _swapId) external nonReentrant {
-    Swap memory swap = swaps[_swapId];
+  function cancelSwap(uint256 id) external nonReentrant {
+    Swap memory swap = swaps[id];
     require(msg.sender == swap.initiator, "Swap initiator not authorized");
-    delete swaps[_swapId];
+    delete swaps[id];
+    emit SwapCancelled(id);
     TransferHelper.withdrawTokens(swap.tokenA, swap.initiator, swap.amountA);
-    emit SwapCancelled(_swapId);
   }
 
   /**
    * View swap details
-   * @param _swapId The ID of the swap to query
+   * @param id The ID of the swap to query
    */
-  function getSwapDetails(uint256 _swapId)
-    public
+  function getSwapDetails(uint256 id)
+    external
     view
     returns (
       address tokenA,
@@ -113,7 +113,7 @@ contract HedgeyDAOSwap is ReentrancyGuard {
       address nftLocker
     )
   {
-    Swap memory swap = swaps[_swapId];
+    Swap memory swap = swaps[id];
     require(swap.initiator != address(0), "Swap does not exist");
     tokenA = swap.tokenA;
     tokenB = swap.tokenB;

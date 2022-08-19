@@ -9,3 +9,5 @@ typechain-types
 cache
 artifacts
 
+#Slither files
+slither-results.json
