@@ -78,6 +78,6 @@ describe('HedgeyDAOSwap contract init swap', () => {
     const receipt = await swapTransation.wait();
     const event = receipt.events.find((event: any) => event.event === 'NewSwap');
     const swapId = event.args.id;
-    await expect(hedgeyDAOSwap.cancelSwap(swapId)).to.be.revertedWith('Swap initiator not authorized');
+    await expect(hedgeyDAOSwap.cancelSwap(swapId)).to.be.revertedWith('only initiator');
   });
 });

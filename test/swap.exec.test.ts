@@ -97,6 +97,6 @@ describe('HedgeyDAOSwap contract execute swap', () => {
     await snapshot.restore();
     const unlockDate = moment().add(1, 'day').unix();
     const swapId = await initSwap(unlockDate);
-    await expect(hedgeyDAOSwap.executeSwap(swapId)).to.be.revertedWith('Swap executor not authorized');
+    await expect(hedgeyDAOSwap.executeSwap(swapId)).to.be.revertedWith('only executor');
   });
 });
