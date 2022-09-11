@@ -9,6 +9,7 @@ describe('HedgeyDAOSwap contract init swap', () => {
   let hedgeyDAOSwap: Contract;
   let tokenA: Contract;
   let tokenB: Contract;
+  let zeroAddress: String;
   let hedgeys: Contract;
 
   let initiator: Signer;
@@ -24,6 +25,7 @@ describe('HedgeyDAOSwap contract init swap', () => {
 
     tokenA = await Token.deploy(initialSupply, 'TokenA', 'TKNA');
     tokenB = await Token.deploy(initialSupply, 'TokenB', 'TKNB');
+    zeroAddress = '0x0000000000000000000000000000000000000000';
     const weth = await Weth.deploy();
     hedgeys = await Hedgeys.deploy(weth.address, '');
 
@@ -64,5 +66,76 @@ describe('HedgeyDAOSwap contract init swap', () => {
 
     const contractBalance = await tokenA.balanceOf(hedgeyDAOSwap.address);
     expect(contractBalance).to.be.eq(amountA);
+  });
+  it('should fail if the initiator does not have sufficient balances', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(tokenA.address, tokenB.address, amountA, amountB, unlockDate, executorAddress, hedgeys.address)
+    ).to.be.revertedWith('THL01');
+  });
+  it('should fail if the initiator did not approve the token transfer', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+    await tokenA.transfer(initiatorAddress, amountA);
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(tokenA.address, tokenB.address, amountA, amountB, unlockDate, executorAddress, hedgeys.address)
+    ).to.be.revertedWith('ERC20: insufficient allowance');
+  });
+  it('should fail if the address of executor is zero address', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+    tokenA.connect(initiator).approve(hedgeyDAOSwap.address, amountA);
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(tokenA.address, tokenB.address, amountA, amountB, unlockDate, zeroAddress, hedgeys.address)
+    ).to.be.revertedWith('executor cannot be zero address');
+  });
+  it('should fail if the address of tokenA is zero address', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+    tokenA.connect(initiator).approve(hedgeyDAOSwap.address, amountA);
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(zeroAddress, tokenB.address, amountA, amountB, unlockDate, executorAddress, hedgeys.address)
+    ).to.be.revertedWith('token address issue');
+  });
+  it('should fail if the address of tokenA is zero address', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+    tokenA.connect(initiator).approve(hedgeyDAOSwap.address, amountA);
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(tokenA.address, zeroAddress, amountA, amountB, unlockDate, executorAddress, hedgeys.address)
+    ).to.be.revertedWith('token address issue');
+  });
+  it('should fail if the unlock date is in the future and the nftLocker is zero address', async () => {
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+    tokenA.connect(initiator).approve(hedgeyDAOSwap.address, amountA);
+
+    await expect(
+      hedgeyDAOSwap
+        .connect(initiator)
+        .initSwap(tokenA.address, tokenB.address, amountA, amountB, unlockDate, executorAddress, zeroAddress)
+    ).to.be.revertedWith('nft locker cannot be zero');
   });
 });

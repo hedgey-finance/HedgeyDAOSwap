@@ -6,7 +6,7 @@ import { takeSnapshot, SnapshotRestorer } from '@nomicfoundation/hardhat-network
 
 const initialSupply = ethers.utils.parseEther('1000');
 
-describe('HedgeyDAOSwap contract init swap', () => {
+describe('HedgeyDAOSwap cancel an initialized swap', () => {
   let hedgeyDAOSwap: Contract;
   let tokenA: Contract;
   let tokenB: Contract;
@@ -79,5 +79,27 @@ describe('HedgeyDAOSwap contract init swap', () => {
     const event = receipt.events.find((event: any) => event.event === 'NewSwap');
     const swapId = event.args.id;
     await expect(hedgeyDAOSwap.cancelSwap(swapId)).to.be.revertedWith('only initiator');
+  });
+  it('should fail if it has already been cancelled', async () => {
+    await snapshot.restore();
+    const amountA = ethers.utils.parseEther('1');
+    const amountB = ethers.utils.parseEther('1');
+    const unlockDate = moment().add(1, 'day').unix();
+
+    await tokenA.transfer(initiatorAddress, amountA);
+    tokenA.connect(initiator).approve(hedgeyDAOSwap.address, amountA);
+    const swapTransation = await hedgeyDAOSwap
+      .connect(initiator)
+      .initSwap(tokenA.address, tokenB.address, amountA, amountB, unlockDate, executorAddress, hedgeys.address);
+    const receipt = await swapTransation.wait();
+    const event = receipt.events.find((event: any) => event.event === 'NewSwap');
+    const swapId = event.args.id;
+
+    const cancelTransaction = await hedgeyDAOSwap.connect(initiator).cancelSwap(swapId);
+    const cancelReceipt = await cancelTransaction.wait();
+    const cancelEvent = cancelReceipt.events.find((event: any) => event.event === 'SwapCancelled');
+    const cancelledSwapId = cancelEvent.args.id;
+    expect(cancelledSwapId).to.be.eq(swapId);
+    await expect(hedgeyDAOSwap.connect(initiator).cancelSwap(swapId)).to.be.reverted;
   });
 });

@@ -99,4 +99,30 @@ describe('HedgeyDAOSwap contract execute swap', () => {
     const swapId = await initSwap(unlockDate);
     await expect(hedgeyDAOSwap.executeSwap(swapId)).to.be.revertedWith('only executor');
   });
+  it('should fail if the swap has already been executed', async () => {
+    await snapshot.restore();
+    const unlockDate = moment().add(1, 'day').unix();
+    const swapId = await initSwap(unlockDate);
+    const amountB = ethers.utils.parseEther('1');
+    await tokenB.transfer(executorAddress, amountB);
+    await tokenB.connect(executor).approve(hedgeyDAOSwap.address, amountB);
+    const executeSwapTransaction = await hedgeyDAOSwap.connect(executor).executeSwap(swapId);
+    const receipt = await executeSwapTransaction.wait();
+    const event = receipt.events.find((event: any) => event.event === 'SwapExecuted');
+    expect(event.args.id).to.be.eq(swapId);
+    await expect(hedgeyDAOSwap.connect(executor).executeSwap(swapId)).to.be.reverted;
+  });
+  it('should fail if the swap has already been cancelled', async () => {
+    await snapshot.restore();
+    const unlockDate = moment().add(1, 'day').unix();
+    const swapId = await initSwap(unlockDate);
+    const amountB = ethers.utils.parseEther('1');
+    await tokenB.transfer(executorAddress, amountB);
+    await tokenB.connect(executor).approve(hedgeyDAOSwap.address, amountB);
+    const cancelledSwapTransaction = await hedgeyDAOSwap.connect(initiator).cancelSwap(swapId);
+    const receipt = await cancelledSwapTransaction.wait();
+    const event = receipt.events.find((event: any) => event.event === 'SwapCancelled');
+    expect(event.args.id).to.be.eq(swapId);
+    await expect(hedgeyDAOSwap.connect(executor).executeSwap(swapId)).to.be.reverted;
+  });
 });
