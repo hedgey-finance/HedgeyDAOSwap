@@ -3,6 +3,8 @@
 This contract allows a locked or unlocked DAO to DAO swap of each DAOs' tokens. Read further in the documentation for the full technical details of how to interact with and use the contract and functions. 
 
 
+Audit can be found here: https://wp.hacken.io/wp-content/uploads/2022/09/Hedgey_24082022_SCAudit_Report.pdf
+
 ## Testing
 Clone repository
 
